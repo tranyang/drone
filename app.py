@@ -12,16 +12,6 @@ CORS(app)
 def hello():
     return "Hello, World!"
 
-# @app.route('/drone/batt', methods=['POST'])
-# def drone():
-#     me = Tello()
-#     me.connect()
-
-#     drone_batt = me.get_battery()
-
-#     msg = f'drone has {drone_batt} left'
-#     return (msg, 201)
-
 @app.route('/drone/takeoff', methods=['POST'])
 def takeoff():
     me = Tello()
@@ -42,10 +32,6 @@ def takeoff():
 @app.route('/batt')
 def batt():
 
-    # data = request.get_json()
-
-    # # print('Data Received: "{data}"'.format(data=data))
-    # print(data)
     drone = Tello()
     drone.connect()
     drone_batt = drone.get_battery()
@@ -64,12 +50,12 @@ def post_route():
 
         drone_batt = drone.get_battery()
         if drone_batt > 30:
+            
             drone.takeoff()
-            # # me.move_forward(20)
             time.sleep(8)
-            # me.rotate_counter_clockwise(360)
-            # time.sleep(5)
-            # me.move_left(20)
+            drone.move_up(50)
+            time.sleep(2)
+
             for cmd in data["instructions"]:
                 print(cmd)
                 cm = int(cmd["dist"])
