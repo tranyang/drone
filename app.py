@@ -14,24 +14,19 @@ def hello():
 
 @app.route('/drone/takeoff', methods=['POST'])
 def takeoff():
-    me = Tello()
-    me.connect()
+    drone = Tello()
+    drone.connect()
 
-    drone_batt = me.get_battery()
-    me.takeoff()
-    # me.move_forward(20)
+    drone_batt = drone.get_battery()
+    drone.takeoff()
     time.sleep(10)
-    # me.rotate_counter_clockwise(360)
-    # time.sleep(5)
-    # me.move_left(20)
-    me.land()
+    drone.land()
 
     msg = f'drone has {drone_batt} left'
     return (msg, 201)
 
 @app.route('/batt')
 def batt():
-
     drone = Tello()
     drone.connect()
     drone_batt = drone.get_battery()
@@ -96,12 +91,31 @@ def post_route():
             return "DRONE NOT ENOUGH JUICE.\n"
         return "Request Processed Successfully.\n"
 
-# me = Tello()
-# me.connect()
+@app.route('/stream', methods=['GET'])
+def stream():
+    drone = Tello()
+    drone.connect()
+    drone.streamon()
+    frame_read = drone.get_frame_read()
+    while True:
+        img = frame_read.frame
+        cv2.imshow("Tello View", img)
+        # key = cv2.waitKey(1) & 0xff
+        # if cv2.waitKey(1) & drone.get_height() == 0:
+        #     break
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    drone.streamoff()
+    
+    cv2.destroyWindow('Tello View')
+    cv2.destroyAllWindows()
+
+# drone = Tello()
+# drone.connect()
 
 # keepRecording = True
-# me.streamon()
-# frame_read = me.get_frame_read()
+# drone.streamon()
+# frame_read = drone.get_frame_read()
 
 # def videoRecorder():
 #     # create a VideoWrite object, recoring to ./video.avi
@@ -120,17 +134,12 @@ def post_route():
 # recorder.start()
 
 
-# # print(me.query_wifi_signal_noise_ratio())
-# print(me.get_battery())
+# # print(drone.query_wifi_signal_noise_ratio())
+# print(drone.get_battery())
 
-# me.takeoff()
-# # me.move_forward(20)
 # time.sleep(2)
-# me.rotate_counter_clockwise(360)
-# time.sleep(2)
-# # me.move_left(20)
-# me.land()
+
 # time.sleep(1)
 # keepRecording = False
 # recorder.join()
-# print(me.get_battery())
+# print(drone.get_battery())
