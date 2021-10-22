@@ -2,15 +2,19 @@ from djitellopy import Tello
 import time
 import cv2 
 from threading import Thread
-from flask import Flask, request
+from flask import Flask, request, render_template , Response
 from flask_cors import CORS
+from flask_socketio import SocketIO
+import base64
 
 app = Flask(__name__)
 CORS(app)
+socketio = SocketIO(app)
+socketio.init_app(app, cors_allowed_origins="*")
 
 @app.route("/")
-def hello():
-    return "Hello, World!"
+def index():
+    return render_template('index.html')
 
 @app.route('/drone/takeoff', methods=['POST'])
 def takeoff():
@@ -90,56 +94,60 @@ def post_route():
         else:
             return "DRONE NOT ENOUGH JUICE.\n"
         return "Request Processed Successfully.\n"
+    
+# def new():
+#     drone = Tello()
+#     drone.connect()
+#     drone.streamon()
+#     frame_read = drone.get_frame_read()
+#     while True:
+#         img = frame_read.frame
+#         imgencode = cv2.imencode('.jpg', img)[1]
+#         stringData=imgencode.tostring()
+#         yield (b'--frame\r\n'
+#             b'Content-Type: text/plain\r\n\r\n'+stringData+b'\r\n')
+# @app.route('/calc')
+# def calc():
+#     return Response(new(),mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/stream', methods=['GET'])
-def stream():
+@socketio.on('check')
+def gen(json):
     drone = Tello()
     drone.connect()
     drone.streamon()
     frame_read = drone.get_frame_read()
     while True:
         img = frame_read.frame
-        cv2.imshow("Tello View", img)
-        # key = cv2.waitKey(1) & 0xff
-        # if cv2.waitKey(1) & drone.get_height() == 0:
-        #     break
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    drone.streamoff()
-    
-    cv2.destroyWindow('Tello View')
-    cv2.destroyAllWindows()
+        new_img = cv2.resize(img, (0,0), fx=0.5, fy=0.5)
+        imgencode = cv2.imencode('.jpg', new_img)[1].tobytes()
+        Data = base64.encodebytes(imgencode).decode('utf-8')
+        message(Data)
+        socketio.sleep(0)
 
-# drone = Tello()
-# drone.connect()
+def message(json, methods=['GET','POST']):
+	# print("Recieved message")
+	socketio.emit('image', json )
 
-# keepRecording = True
-# drone.streamon()
-# frame_read = drone.get_frame_read()
+# @socketio.on('stream_on')
+# def stream_on():
+#     print( 'connected to server' )
+#     drone = Tello()
+#     drone.connect()
+#     drone.streamon()
+#     frame_read = drone.get_frame_read()
+#     while True:
+#         img = frame_read.frame
+#         imgencode = cv2.imencode('.jpg', img)[1]
+        
+#         Data = base64.b64encode(imgencode).decode('utf-8')
+#         b64_src = 'data:image/jpg;base64,'
+#         stringData = b64_src + Data
+#         socketio.emit('response_back', stringData)
+#     drone.streamoff()
 
-# def videoRecorder():
-#     # create a VideoWrite object, recoring to ./video.avi
-#     height, width, _ = frame_read.frame.shape
-#     video = cv2.VideoWriter('video.avi', cv2.VideoWriter_fourcc(*'XVID'), 30, (width, height))
-
-#     while keepRecording:
-#         video.write(frame_read.frame)
-#         time.sleep(1 / 30)
-
-#     video.release()
-
-# # we need to run the recorder in a seperate thread, otherwise blocking options
-# #  would prevent frames from getting added to the video
-# recorder = Thread(target=videoRecorder)
-# recorder.start()
-
-
-# # print(drone.query_wifi_signal_noise_ratio())
-# print(drone.get_battery())
-
-# time.sleep(2)
-
-# time.sleep(1)
-# keepRecording = False
-# recorder.join()
-# print(drone.get_battery())
+if __name__ == '__main__':
+    socketio.run(app, host='127.0.0.1', port=5000)
+    # app.run(host='127.0.0.1', port=5000, threaded=True)
+# @socketio.on( 'stream_off' )
+# def stream_off( ):
+#     print( 'disconnected, stream is off' )
